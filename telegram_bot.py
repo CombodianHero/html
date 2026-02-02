@@ -6,578 +6,214 @@ import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Set up logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Get bot token from environment variable
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '7601635113:AAHjmE2yjru1sIIbAW6g56-sIc30cv4Tsm8')
 
+# ---------------- PARSER ---------------- #
 def parse_txt_file(file_path):
-    """Parse the txt file and classify subjects with videos and PDFs"""
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
-    
-    subjects_dict = {}
-    
+
+    subjects = {}
+
     for line in lines:
         line = line.strip()
         if not line:
             continue
-        
-        # Parse line: (Category)Title:URL
-        match = re.match(r'\(([^)]+)\)(.+?):(https?://.+)', line)
-        if not match:
-            continue
-        
-        category = match.group(1).strip()
-        title = match.group(2).strip()
-        url = match.group(3).strip()
-        
-        # Extract subject name from title
-        subject_match = re.search(r'(?:Lect[.-]?\d+\s+)(.+?)(?:\s*\(|$)', title)
-        if subject_match:
-            subject_name = subject_match.group(1).strip()
-        else:
-            subject_match = re.search(r'Lect[.-]?\d+\s+(.+)', title)
-            if subject_match:
-                subject_name = subject_match.group(1).strip()
-            else:
-                subject_name = "General"
-        
-        # Clean up subject name
-        subject_name = re.sub(r'\s+', ' ', subject_name)
-        
-        # Determine if it's video or PDF
-        is_pdf = url.endswith('.pdf')
-        is_video = not is_pdf
-        
-        # Process Classplus URLs through API
-        if is_video and 'classplus' in url.lower():
-            url = f"https://engineers-babu.onrender.com/?url={urllib.parse.quote(url)}"
-        
-        # Initialize subject if not exists
-        if subject_name not in subjects_dict:
-            subjects_dict[subject_name] = {
-                'videos': [],
-                'pdfs': []
-            }
-        
-        # Add to appropriate list
-        if is_video:
-            subjects_dict[subject_name]['videos'].append({
-                'title': title,
-                'src': url,
-                'drm': 'classplus' in match.group(3).lower()
-            })
-        else:
-            subjects_dict[subject_name]['pdfs'].append({
-                'name': title,
-                'src': url
-            })
-    
-    # Convert to the required format
-    result = []
-    for subject_name, content in subjects_dict.items():
-        if content['videos'] or content['pdfs']:
-            result.append({
-                'folder': subject_name,
-                'subjects': [{
-                    'name': subject_name,
-                    'videos': content['videos'],
-                    'pdfs': content['pdfs']
-                }]
-            })
-    
-    return result
 
-def generate_html(data, output_path):
-    """Generate HTML file from parsed data"""
-    # Convert data to JSON string for JavaScript
-    data_json = json.dumps(data, ensure_ascii=False, indent=2)
-    
-    html_template = f'''<!DOCTYPE html>
-<html lang="en">
+        m = re.match(r"\(([^)]+)\)(.+?):(https?://.+)", line)
+        if not m:
+            continue
+
+        title = m.group(2).strip()
+        url = m.group(3).strip()
+
+        subject = re.sub(r"Lect[.-]?\d+", "", title).strip() or "General"
+
+        is_pdf = url.lower().endswith(".pdf")
+
+        if not is_pdf and "classplus" in url.lower():
+            url = f"https://engineers-babu.onrender.com/?url={urllib.parse.quote(url)}"
+
+        subjects.setdefault(subject, {"videos": [], "pdfs": []})
+
+        if is_pdf:
+            subjects[subject]["pdfs"].append({"name": title, "src": url})
+        else:
+            subjects[subject]["videos"].append({"title": title, "src": url})
+
+    return [{
+        "folder": k,
+        "subjects": [{"name": k, **v}]
+    } for k, v in subjects.items()]
+
+
+# ---------------- HTML GENERATOR ---------------- #
+def generate_html(data, user_id, user_name, output_path):
+    data_json = json.dumps(data, ensure_ascii=False)
+
+    html = f"""
+<!DOCTYPE html>
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Engineers Babu | HTML Viewer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Engineers Babu Player</title>
 
 <style>
-/* ================= THEME VARIABLES ================= */
-:root{{
-  /* 🌙 DARK THEME */
-  --page-bg:#0f1117;
-  --card-bg:#161b22;
-  --inner-bg:#1f2633;
-  --text:#e5e7eb;
-  --muted:#9ca3af;
-  --border:rgba(255,255,255,0.08);
-  --shadow:none;
-  --primary:#2563eb;
-}}
-
-.light{{
-  /* ☀️ LIGHT THEME */
-  --page-bg:#f4f6fb;
-  --card-bg:#ffffff;
-  --inner-bg:#f1f4fb;
-  --text:#1f2937;
-  --muted:#6b7280;
-  --border:rgba(0,0,0,0.06);
-  --shadow:0 8px 24px rgba(0,0,0,0.05);
-  --primary:#2563eb;
-}}
-
-/* ================= BASE ================= */
-*{{
+body {{
   margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-}}
-
-body{{
-  background:var(--page-bg);
-  color:var(--text);
-  transition:background .3s,color .3s;
-}}
-
-/* ================= HEADER ================= */
-.main-header{{
-  position:relative;
-  display:flex;
-  justify-content:flex-end;
-  align-items:center;
-  padding:18px 20px;
-  background:var(--card-bg);
-  border-bottom:1px solid var(--border);
-}}
-
-.title-box{{
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  text-align:center;
-}}
-
-.title-box h1{{
-  font-size:42px;
-  font-weight:800;
-  background:linear-gradient(90deg,#00f5ff,#E50914,#ffcc00);
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  letter-spacing:2px;
-}}
-
-.title-box span{{
-  font-size:13px;
-  color:var(--muted);
-  letter-spacing:3px;
-}}
-
-.toggle{{
-  cursor:pointer;
-  padding:8px 14px;
-  border-radius:20px;
-  background:var(--inner-bg);
-  border:1px solid var(--border);
-}}
-
-/* ===== GRADIENT LINE ===== */
-.gradient-bar{{
-  height:6px;
-  background:linear-gradient(
-    90deg,
-    #00f5ff,
-    #7a00ff,
-    #E50914,
-    #ffcc00
-  );
-}}
-
-/* ================= SEARCH ================= */
-.search{{
-  padding:14px;
-}}
-
-.search input{{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:none;
-  outline:none;
-  background:var(--card-bg);
-  color:var(--text);
-  box-shadow:var(--shadow);
-}}
-
-/* ================= LAYOUT ================= */
-.container{{
-  display:grid;
-  grid-template-columns:280px 1fr 360px;
-  gap:18px;
-  padding:18px;
-}}
-
-/* ================= CARD ================= */
-.card{{
-  background:var(--card-bg);
-  border-radius:18px;
-  padding:14px;
-  border:1px solid var(--border);
-  box-shadow:var(--shadow);
-}}
-
-/* ================= SUBJECTS ================= */
-.folder-title{{
-  padding:12px;
-  border-radius:12px;
-  background:var(--inner-bg);
-  font-weight:600;
-  cursor:pointer;
-}}
-
-.subject{{
-  margin-top:6px;
-  padding:10px;
-  border-radius:10px;
-  background:var(--inner-bg);
-  cursor:pointer;
-}}
-
-.subject:hover,
-.subject.active{{
-  background:var(--primary);
-  color:#fff;
-}}
-
-/* ================= VIDEO ================= */
-#videoPlayer{{
-  margin-top:10px;
-  padding:8px;
-  background:var(--inner-bg);
-  border-radius:14px;
+  background:#0f1117;
+  color:white;
+  font-family:Arial;
 }}
 
 .api-player-container {{
+  position:relative;
   width:100%;
-  height:320px;
-  border-radius:12px;
-  overflow:hidden;
+  height:420px;
   background:black;
-  margin-bottom:10px;
+  overflow:hidden;
 }}
 
 .api-player-iframe {{
   width:100%;
   height:100%;
   border:none;
-  border-radius:12px;
 }}
 
-.playlist-item{{
-  margin-top:6px;
+.watermark {{
+  position:absolute;
+  top:20px;
+  left:20px;
+  z-index:99;
+  opacity:0.25;
+  font-size:14px;
+  color:white;
+  pointer-events:none;
+  white-space:nowrap;
+  text-shadow:0 0 6px black;
+}}
+
+.playlist-item {{
   padding:10px;
-  border-radius:10px;
-  background:var(--inner-bg);
+  background:#1f2633;
+  margin:4px;
   cursor:pointer;
 }}
-
-.playlist-item:hover,
-.playlist-item.active{{
-  background:var(--primary);
-  color:#fff;
-}}
-
-/* ================= PDF ================= */
-.pdf-item{{
-  margin-bottom:6px;
-  padding:10px;
-  border-radius:10px;
-  background:var(--inner-bg);
-  cursor:pointer;
-}}
-
-.pdf-item:hover,
-.pdf-item.active{{
-  background:var(--primary);
-  color:#fff;
-}}
-
-iframe{{
-  width:100%;
-  height:100%;
-  background:var(--inner-bg);
-  border-radius:14px;
-  border:none;
-}}
-
-/* ================= RESPONSIVE ================= */
-@media(max-width:900px){{
-  .container{{
-    grid-template-columns:1fr;
-  }}
-  .api-player-container {{
-    height:300px;
-  }}
-  iframe{{
-    height:400px;
-  }}
-}}
-
-@media(max-width:600px){{
-  .api-player-container {{
-    height:250px;
-  }}
-}}
+.playlist-item:hover {{ background:#2563eb; }}
 </style>
 </head>
 
-<body class="light">
+<body>
 
-<header class="main-header">
-  <div class="title-box">
-    <h1>Engineers Babu</h1>
-    <span>HTML VIEWER</span>
-  </div>
-  <div class="toggle" onclick="toggleTheme()">🌙 / ☀️</div>
-</header>
+<h3>🎬 Video Player</h3>
 
-<div class="gradient-bar"></div>
-
-<div class="search">
-  <input type="text" placeholder="Search subject..." onkeyup="filterSubjects(this.value)">
-</div>
-
-<div class="container">
-
-  <!-- LEFT -->
-  <div class="card" id="subjects"></div>
-
-  <!-- CENTER -->
-  <div class="card">
-    <h3>🎬 Video Player</h3>
-    <div id="videoPlayer"></div>
-    <div id="playlist"></div>
-  </div>
-
-  <!-- RIGHT -->
-  <div class="card">
-    <h3>📄 PDF Viewer</h3>
-    <div id="pdfList"></div>
-    <iframe id="pdfViewer"></iframe>
-  </div>
-
-</div>
+<div id="videoPlayer"></div>
+<div id="playlist"></div>
 
 <script>
-/* ================= THEME TOGGLE ================= */
-function toggleTheme(){{
-  document.body.classList.toggle("light");
-}}
-
-/* ================= DATA ================= */
 const data = {data_json};
 
-/* ================= LOGIC ================= */
-function renderSubjects(){{
-  let html="";
-  data.forEach(f=>{{
-    html+=`
-      <div class="folder-title"
-        onclick="this.nextElementSibling.style.display =
-        this.nextElementSibling.style.display==='block'?'none':'block'">
-        📁 ${{f.folder}}
-      </div>
-      <div style="display:none;padding-left:6px;">
-    `;
-    f.subjects.forEach(s=>{{
-      html+=`<div class="subject" onclick='loadSubject(${{JSON.stringify(s)}},this)'>${{s.name}}</div>`;
-    }});
-    html+=`</div>`;
-  }});
-  subjects.innerHTML=html;
-}}
-
-function loadSubject(sub,el){{
-  document.querySelectorAll(".subject").forEach(x=>x.classList.remove("active"));
-  el.classList.add("active");
-  
-  if(sub.videos && sub.videos.length > 0){{
-    playVideo(sub.videos[0]);
-    renderPlaylist(sub.videos);
-  }} else {{
-    videoPlayer.innerHTML="<p style='padding:20px;text-align:center;color:var(--muted)'>No videos available</p>";
-    playlist.innerHTML="";
-  }}
-  
-  if(sub.pdfs && sub.pdfs.length > 0){{
-    renderPdf(sub.pdfs);
-  }} else {{
-    pdfList.innerHTML="<p style='padding:10px;text-align:center;color:var(--muted)'>No PDFs available</p>";
-    pdfViewer.src="";
-  }}
-}}
+const USER_WATERMARK = "User: {user_name} | ID: {user_id}";
 
 function playVideo(v){{
-  videoPlayer.innerHTML="";
-  
-  // Create API player container
-  const apiPlayerHTML = `
-    <div class="api-player-container">
-      <iframe class="api-player-iframe" 
-              id="apiPlayer" 
-              src="${{v.src}}" 
-              allowfullscreen
-              allow="autoplay; encrypted-media; picture-in-picture">
-      </iframe>
-    </div>
+  videoPlayer.innerHTML = `
+  <div class="api-player-container">
+    <iframe class="api-player-iframe"
+      src="${{v.src}}"
+      allowfullscreen
+      allow="autoplay; encrypted-media; fullscreen">
+    </iframe>
+
+    <div id="wm" class="watermark">${{USER_WATERMARK}}</div>
+  </div>
   `;
-  
-  videoPlayer.innerHTML = apiPlayerHTML;
-  
-  // Highlight active video in playlist
-  document.querySelectorAll(".playlist-item").forEach(x=>x.classList.remove("active"));
-  
-  // Try to autoplay
-  setTimeout(() => {{
-    try {{
-      const iframe = document.getElementById('apiPlayer');
-      if(iframe) {{
-        iframe.focus();
-      }}
-    }} catch(e) {{
-      console.log("Autoplay might be blocked by browser");
-    }}
-  }}, 1000);
+
+  videoPlayer.scrollIntoView({{behavior:"smooth"}});
+  startWatermarkMotion();
 }}
 
 function renderPlaylist(vs){{
-  playlist.innerHTML=vs.map((v, idx)=>
-    `<div class="playlist-item" onclick='playVideo(${{JSON.stringify(v)}});highlightPlaylistItem(this)' data-idx="${{idx}}">${{v.title}}</div>`
+  playlist.innerHTML = vs.map(v =>
+    `<div class="playlist-item" onclick='playVideo(${{JSON.stringify(v)}})'>${{v.title}}</div>`
   ).join("");
 }}
 
-function highlightPlaylistItem(el){{
-  document.querySelectorAll(".playlist-item").forEach(x=>x.classList.remove("active"));
-  el.classList.add("active");
+function startWatermarkMotion(){{
+  const wm = document.getElementById("wm");
+  if(!wm) return;
+
+  setInterval(() => {{
+    wm.style.top = Math.random()*70 + "%";
+    wm.style.left = Math.random()*70 + "%";
+  }}, 3000);
 }}
 
-function renderPdf(p){{
-  pdfList.innerHTML=p.map((x, idx)=>
-    `<div class="pdf-item" onclick="pdfViewer.src='${{x.src}}';highlightPdfItem(this)" data-idx="${{idx}}">${{x.name}}</div>`
-  ).join("");
-  if(p.length > 0){{
-    pdfViewer.src=p[0].src;
+// Load first video
+if(data[0]?.subjects[0]?.videos.length){{
+  renderPlaylist(data[0].subjects[0].videos);
+  playVideo(data[0].subjects[0].videos[0]);
+}}
+
+// Disable right click & inspect
+document.addEventListener("contextmenu", e => e.preventDefault());
+document.addEventListener("keydown", e => {{
+  if(e.key==="F12" || (e.ctrlKey && e.shiftKey && ["I","J","C"].includes(e.key)) || (e.ctrlKey && e.key==="U")) {{
+    e.preventDefault();
   }}
-}}
+}});
 
-function highlightPdfItem(el){{
-  document.querySelectorAll(".pdf-item").forEach(x=>x.classList.remove("active"));
-  el.classList.add("active");
-}}
-
-function filterSubjects(val){{
-  document.querySelectorAll(".subject").forEach(s=>{{
-    s.style.display = s.innerText.toLowerCase().includes(val.toLowerCase())
-      ? "block" : "none";
-  }});
-}}
-
-renderSubjects();
+// Fullscreen orientation lock
+document.addEventListener("fullscreenchange",()=>{
+  if(document.fullscreenElement && screen.orientation?.lock)
+    screen.orientation.lock("landscape").catch(()=>{{}});
+  else screen.orientation?.unlock?.();
+});
 </script>
 
 </body>
-</html>'''
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(html_template)
-    
-    return output_path
+</html>
+"""
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(html)
 
+
+# ---------------- BOT HANDLERS ---------------- #
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send welcome message"""
-    await update.message.reply_text(
-        "👋 Welcome to Engineers Babu HTML Generator Bot!\n\n"
-        "📤 Send me a .txt file with the format:\n"
-        "(Category)Title:URL\n\n"
-        "I'll generate an HTML viewer for you! 🚀"
-    )
+    await update.message.reply_text("📤 Send .txt file to generate protected player")
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle uploaded document"""
-    document = update.message.document
-    
-    # Check if it's a txt file
-    if not document.file_name.endswith('.txt'):
-        await update.message.reply_text("❌ Please send a .txt file!")
-        return
-    
-    await update.message.reply_text("⏳ Processing your file...")
-    
-    try:
-        # Download file
-        file = await context.bot.get_file(document.file_id)
-        input_path = f"/tmp/{document.file_name}"
-        await file.download_to_drive(input_path)
-        
-        # Parse the file
-        parsed_data = parse_txt_file(input_path)
-        
-        # Generate HTML
-        output_filename = document.file_name.replace('.txt', '.html')
-        output_path = f"/tmp/{output_filename}"
-        generate_html(parsed_data, output_path)
-        
-        # Send the generated HTML file
-        with open(output_path, 'rb') as f:
-            await update.message.reply_document(
-                document=f,
-                filename=output_filename,
-                caption=f"✅ HTML file generated successfully!\n\n"
-                        f"📊 Found {len(parsed_data)} subjects\n"
-                        f"🎬 Ready to view your videos and PDFs!"
-            )
-        
-        # Clean up
-        os.remove(input_path)
-        os.remove(output_path)
-        
-    except Exception as e:
-        logger.error(f"Error processing file: {e}")
-        await update.message.reply_text(f"❌ Error processing file: {str(e)}")
+    doc = update.message.document
+    if not doc.file_name.endswith(".txt"):
+        return await update.message.reply_text("❌ Only .txt allowed")
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Log errors"""
-    logger.error(f"Update {update} caused error {context.error}")
+    file = await context.bot.get_file(doc.file_id)
+    input_path = f"/tmp/{doc.file_name}"
+    await file.download_to_drive(input_path)
 
-def main():
-    """Start the bot"""
-    if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
-        logger.error("Please set BOT_TOKEN environment variable")
-        return
-    
-    # Create application
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # Add handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    
-    # Add error handler
-    application.add_error_handler(error_handler)
-    
-    # Start the bot
-    logger.info("🤖 Bot started! Send /start to begin.")
-    application.run_polling(
-        allowed_updates=Update.ALL_TYPES,
-        drop_pending_updates=True
+    data = parse_txt_file(input_path)
+
+    user = update.effective_user
+    output = f"/tmp/{doc.file_name.replace('.txt','.html')}"
+
+    generate_html(data, user.id, user.full_name, output)
+
+    await update.message.reply_document(
+        document=open(output,"rb"),
+        filename=os.path.basename(output),
+        caption="✅ Protected HTML generated"
     )
 
+
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+    app.run_polling()
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    main()

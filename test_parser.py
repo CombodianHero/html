@@ -46,8 +46,7 @@ def parse_txt_file(file_path):
         is_pdf = url.endswith('.pdf')
         is_video = not is_pdf
         
-        # Process Classplus URLs
-        original_url = url
+        # Process Classplus URLs through API
         if 'classplus' in url.lower():
             url = f"https://engineers-babu.onrender.com/?url={urllib.parse.quote(url)}"
         
@@ -63,7 +62,7 @@ def parse_txt_file(file_path):
             subjects_dict[subject_name]['videos'].append({
                 'title': title,
                 'src': url,
-                'drm': 'classplus' in original_url.lower()  # Original URL check
+                'drm': 'classplus' in match.group(3).lower()  # Original URL check
             })
         else:
             subjects_dict[subject_name]['pdfs'].append({
@@ -99,9 +98,6 @@ def generate_html(data, output_path):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Engineers Babu | HTML Viewer</title>
-
-<!-- Shaka Player (DRM / DASH) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js"></script>
 
 <style>
 /* ================= THEME VARIABLES ================= */
@@ -260,10 +256,20 @@ body{{
   border-radius:14px;
 }}
 
-video{{
+.api-player-container {{
   width:100%;
+  height:320px;
   border-radius:12px;
+  overflow:hidden;
   background:black;
+  margin-bottom:10px;
+}}
+
+.api-player-iframe {{
+  width:100%;
+  height:100%;
+  border:none;
+  border-radius:12px;
 }}
 
 .playlist-item{{
@@ -308,8 +314,17 @@ iframe{{
   .container{{
     grid-template-columns:1fr;
   }}
+  .api-player-container {{
+    height:300px;
+  }}
   iframe{{
     height:400px;
+  }}
+}}
+
+@media(max-width:600px){{
+  .api-player-container {{
+    height:250px;
   }}
 }}
 </style>
@@ -404,27 +419,34 @@ function loadSubject(sub,el){{
 function playVideo(v){{
   videoPlayer.innerHTML="";
   
+  // Create API player container
+  const apiPlayerHTML = `
+    <div class="api-player-container">
+      <iframe class="api-player-iframe" 
+              id="apiPlayer" 
+              src="${{v.src}}" 
+              allowfullscreen
+              allow="autoplay; encrypted-media; picture-in-picture">
+      </iframe>
+    </div>
+  `;
+  
+  videoPlayer.innerHTML = apiPlayerHTML;
+  
   // Highlight active video in playlist
   document.querySelectorAll(".playlist-item").forEach(x=>x.classList.remove("active"));
   
-  if(v.drm){{
-    const video=document.createElement("video");
-    video.controls=true;
-    video.autoplay=true;
-    videoPlayer.appendChild(video);
-    
-    if(typeof shaka !== 'undefined'){{
-      const player=new shaka.Player(video);
-      player.load(v.src).catch(err=>{{
-        console.error("Error loading video:", err);
-        videoPlayer.innerHTML=`<p style='padding:20px;text-align:center;color:#ef4444'>Error loading video: ${{err.message}}</p>`;
-      }});
-    }} else {{
-      videoPlayer.innerHTML="<p style='padding:20px;text-align:center;color:#ef4444'>Shaka Player not loaded</p>";
+  // Try to autoplay
+  setTimeout(() => {{
+    try {{
+      const iframe = document.getElementById('apiPlayer');
+      if(iframe) {{
+        iframe.focus();
+      }}
+    }} catch(e) {{
+      console.log("Autoplay might be blocked by browser");
     }}
-  }}else{{
-    videoPlayer.innerHTML=`<video controls autoplay src="${{v.src}}"></video>`;
-  }}
+  }}, 1000);
 }}
 
 function renderPlaylist(vs){{
@@ -472,16 +494,39 @@ renderSubjects();
 
 # Test with the uploaded file
 if __name__ == '__main__':
-    input_file = '/mnt/user-data/uploads/BTSC_JE_NEW_SPL_Subjects.txt'
-    output_file = '/mnt/user-data/outputs/BTSC_JE_NEW_SPL_Subjects.html'
+    # Test with a sample file
+    test_input = '''(Physics)Lect.-1 Introduction to Physics:https://example.com/video1.mp4
+(Math)Lect.-1 Calculus Basics:https://classplusapp.com/video123
+(Physics)Notes-1 Formulas:https://example.com/notes.pdf
+(Math)Worksheet-1 Problems:https://example.com/worksheet.pdf'''
+    
+    # Create a test file
+    test_file = '/tmp/test_input.txt'
+    with open(test_file, 'w', encoding='utf-8') as f:
+        f.write(test_input)
     
     print("🔍 Parsing txt file...")
-    parsed_data = parse_txt_file(input_file)
+    parsed_data = parse_txt_file(test_file)
     
     print(f"✅ Found {len(parsed_data)} subjects")
     for subject in parsed_data:
-        print(f"  📁 {subject['folder']}: {len(subject['subjects'][0]['videos'])} videos, {len(subject['subjects'][0]['pdfs'])} PDFs")
+        videos = subject['subjects'][0]['videos']
+        pdfs = subject['subjects'][0]['pdfs']
+        print(f"  📁 {subject['folder']}: {len(videos)} videos, {len(pdfs)} PDFs")
+        for video in videos[:2]:  # Show first 2 videos
+            print(f"     ▶️ {video['title']}")
+            print(f"        🔗 {video['src'][:80]}...")
+        for pdf in pdfs[:2]:  # Show first 2 PDFs
+            print(f"     📄 {pdf['name']}")
     
     print("\n🎨 Generating HTML file...")
+    output_file = '/tmp/test_output.html'
     generate_html(parsed_data, output_file)
     print(f"✅ HTML file generated: {output_file}")
+    
+    # Clean up
+    os.remove(test_file)
+    
+    # Print the HTML file path for easy access
+    print(f"\n📁 Output file location: {output_file}")
+    print("📋 To view: Open this file in your web browser")

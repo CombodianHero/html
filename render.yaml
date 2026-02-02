@@ -5,5 +5,5 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python telegram_bot.py
     envVars:
-      - key: BOT_TOKEN
+      - key: 7601635113:AAHjmE2yjru1sIIbAW6g56-sIc30cv4Tsm8
         sync: false

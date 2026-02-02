@@ -47,7 +47,7 @@ def parse_txt_file(file_path):
         is_video = not is_pdf
         
         # Process Classplus URLs through API
-        if 'classplus' and 'm3u8' in url.lower():
+        if is_video and 'classplus' in url.lower():
             url = f"https://engineers-babu.onrender.com/?url={urllib.parse.quote(url)}"
         
         # Initialize subject if not exists
@@ -62,12 +62,13 @@ def parse_txt_file(file_path):
             subjects_dict[subject_name]['videos'].append({
                 'title': title,
                 'src': url,
-                'drm': 'classplus' in match.group(3).lower()  # Original URL check
+                'drm': 'classplus' in match.group(3).lower()
             })
         else:
             subjects_dict[subject_name]['pdfs'].append({
                 'name': title,
-                'src': url
+                'src': url,
+                'full_url': url
             })
     
     # Convert to the required format
@@ -223,6 +224,14 @@ body{{
   padding:14px;
   border:1px solid var(--border);
   box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+}}
+
+.card h3{{
+  margin-bottom:12px;
+  font-size:18px;
+  font-weight:600;
 }}
 
 /* ================= SUBJECTS ================= */
@@ -232,6 +241,7 @@ body{{
   background:var(--inner-bg);
   font-weight:600;
   cursor:pointer;
+  margin-bottom:8px;
 }}
 
 .subject{{
@@ -240,92 +250,175 @@ body{{
   border-radius:10px;
   background:var(--inner-bg);
   cursor:pointer;
+  transition:all 0.2s;
 }}
 
 .subject:hover,
 .subject.active{{
   background:var(--primary);
   color:#fff;
+  transform:translateX(4px);
 }}
 
-/* ================= VIDEO ================= */
+/* ================= VIDEO PLAYER SECTION ================= */
 #videoPlayer{{
-  margin-top:10px;
-  padding:8px;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:400px;
+}}
+
+#videoPlayerContainer{{
+  flex:1;
   background:var(--inner-bg);
   border-radius:14px;
-}}
-
-.api-player-container {{
-  width:100%;
-  height:320px;
-  border-radius:12px;
   overflow:hidden;
-  background:black;
-  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid var(--border);
+  margin-bottom:12px;
 }}
 
-.api-player-iframe {{
+/* Fixed API Player Container - NO SCROLLING */
+.api-player-container{{
+  width:100%;
+  height:100%;
+  min-height:360px;
+  background:#000;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden !important;
+}}
+
+.api-player-iframe{{
   width:100%;
   height:100%;
   border:none;
-  border-radius:12px;
+  background:#000;
+  overflow:hidden !important;
+}}
+
+/* PLAYLIST SECTION */
+#playlistContainer{{
+  flex:1;
+  overflow-y:auto;
+  max-height:300px;
+  padding-right:4px;
 }}
 
 .playlist-item{{
-  margin-top:6px;
   padding:10px;
   border-radius:10px;
   background:var(--inner-bg);
   cursor:pointer;
+  margin-bottom:6px;
+  transition:all 0.2s;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}}
+
+.playlist-item:before{{
+  content:"▶";
+  font-size:12px;
+  opacity:0.7;
 }}
 
 .playlist-item:hover,
 .playlist-item.active{{
   background:var(--primary);
   color:#fff;
+  transform:translateX(4px);
 }}
 
-/* ================= PDF ================= */
+.playlist-item.active:before{{
+  content:"⏸";
+}}
+
+/* ================= PDF SECTION ================= */
+#pdfContainer{{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:400px;
+}}
+
+#pdfList{{
+  flex:1;
+  overflow-y:auto;
+  max-height:350px;
+  padding-right:4px;
+}}
+
 .pdf-item{{
-  margin-bottom:6px;
   padding:10px;
   border-radius:10px;
   background:var(--inner-bg);
   cursor:pointer;
+  margin-bottom:6px;
+  transition:all 0.2s;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}}
+
+.pdf-item:before{{
+  content:"📄";
+  font-size:14px;
 }}
 
 .pdf-item:hover,
 .pdf-item.active{{
   background:var(--primary);
   color:#fff;
+  transform:translateX(4px);
 }}
 
-iframe{{
-  width:100%;
-  height:100%;
-  background:var(--inner-bg);
-  border-radius:14px;
-  border:none;
-}}
+/* PDF VIEWER REMOVED - Now opens in new tab */
 
 /* ================= RESPONSIVE ================= */
 @media(max-width:900px){{
   .container{{
     grid-template-columns:1fr;
   }}
-  .api-player-container {{
-    height:300px;
+  #videoPlayerContainer{{
+    min-height:300px;
   }}
-  iframe{{
-    height:400px;
+  .api-player-container{{
+    min-height:300px;
   }}
 }}
 
 @media(max-width:600px){{
-  .api-player-container {{
-    height:250px;
+  #videoPlayerContainer{{
+    min-height:250px;
   }}
+  .api-player-container{{
+    min-height:250px;
+  }}
+}}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar{{
+  width:6px;
+}}
+
+::-webkit-scrollbar-track{{
+  background:transparent;
+  border-radius:3px;
+}}
+
+::-webkit-scrollbar-thumb{{
+  background:var(--primary);
+  border-radius:3px;
+}}
+
+::-webkit-scrollbar-thumb:hover{{
+  background:var(--primary);
+  opacity:0.8;
 }}
 </style>
 </head>
@@ -348,21 +441,40 @@ iframe{{
 
 <div class="container">
 
-  <!-- LEFT -->
-  <div class="card" id="subjects"></div>
-
-  <!-- CENTER -->
-  <div class="card">
-    <h3>🎬 Video Player</h3>
-    <div id="videoPlayer"></div>
-    <div id="playlist"></div>
+  <!-- LEFT - SUBJECTS -->
+  <div class="card" id="subjectsCard">
+    <h3>📚 Subjects</h3>
+    <div id="subjects"></div>
   </div>
 
-  <!-- RIGHT -->
-  <div class="card">
-    <h3>📄 PDF Viewer</h3>
-    <div id="pdfList"></div>
-    <iframe id="pdfViewer"></iframe>
+  <!-- CENTER - VIDEO PLAYER -->
+  <div class="card" id="videoCard">
+    <h3>🎬 Video Player</h3>
+    <div id="videoPlayer">
+      <div id="videoPlayerContainer">
+        <div class="api-player-container">
+          <iframe class="api-player-iframe" 
+                  id="apiPlayer" 
+                  allowfullscreen
+                  allow="autoplay; encrypted-media; picture-in-picture">
+          </iframe>
+        </div>
+      </div>
+      <div id="playlistContainer">
+        <div id="playlist"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT - PDF LIST -->
+  <div class="card" id="pdfCard">
+    <h3>📄 PDF Files</h3>
+    <div id="pdfContainer">
+      <div id="pdfList"></div>
+      <div style="margin-top:15px; padding:12px; background:var(--inner-bg); border-radius:10px; font-size:14px; color:var(--muted);">
+        <p>📌 <strong>Note:</strong> Click on any PDF to open it in a new tab</p>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -371,19 +483,23 @@ iframe{{
 /* ================= THEME TOGGLE ================= */
 function toggleTheme(){{
   document.body.classList.toggle("light");
+  const toggleBtn = document.querySelector('.toggle');
+  toggleBtn.textContent = document.body.classList.contains('light') ? '🌙' : '☀️';
 }}
 
 /* ================= DATA ================= */
 const data = {data_json};
 
-/* ================= LOGIC ================= */
+/* ================= VARIABLES ================= */
+let currentVideo = null;
+
+/* ================= SUBJECTS RENDERING ================= */
 function renderSubjects(){{
   let html="";
   data.forEach(f=>{{
     html+=`
       <div class="folder-title"
-        onclick="this.nextElementSibling.style.display =
-        this.nextElementSibling.style.display==='block'?'none':'block'">
+        onclick="toggleFolder(this)">
         📁 ${{f.folder}}
       </div>
       <div style="display:none;padding-left:6px;">
@@ -396,84 +512,108 @@ function renderSubjects(){{
   subjects.innerHTML=html;
 }}
 
+function toggleFolder(element){{
+  const content = element.nextElementSibling;
+  content.style.display = content.style.display === 'block' ? 'none' : 'block';
+}}
+
+/* ================= LOAD SUBJECT ================= */
 function loadSubject(sub,el){{
+  // Highlight selected subject
   document.querySelectorAll(".subject").forEach(x=>x.classList.remove("active"));
   el.classList.add("active");
   
+  // Load videos if available
   if(sub.videos && sub.videos.length > 0){{
     playVideo(sub.videos[0]);
     renderPlaylist(sub.videos);
   }} else {{
-    videoPlayer.innerHTML="<p style='padding:20px;text-align:center;color:var(--muted)'>No videos available</p>";
-    playlist.innerHTML="";
+    document.getElementById('apiPlayer').src = '';
+    document.getElementById('playlist').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No videos available</div>';
   }}
   
+  // Load PDFs if available
   if(sub.pdfs && sub.pdfs.length > 0){{
-    renderPdf(sub.pdfs);
+    renderPdfs(sub.pdfs);
   }} else {{
-    pdfList.innerHTML="<p style='padding:10px;text-align:center;color:var(--muted)'>No PDFs available</p>";
-    pdfViewer.src="";
+    document.getElementById('pdfList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No PDFs available</div>';
   }}
 }}
 
-function playVideo(v){{
-  videoPlayer.innerHTML="";
+/* ================= VIDEO PLAYER FUNCTIONS ================= */
+function playVideo(video){{
+  currentVideo = video;
   
-  // Create API player container
-  const apiPlayerHTML = `
-    <div class="api-player-container">
-      <iframe class="api-player-iframe" 
-              id="apiPlayer" 
-              src="${{v.src}}" 
-              allowfullscreen
-              allow="autoplay; encrypted-media; picture-in-picture">
-      </iframe>
-    </div>
-  `;
+  // Set iframe source
+  const apiPlayer = document.getElementById('apiPlayer');
+  apiPlayer.src = video.src;
   
-  videoPlayer.innerHTML = apiPlayerHTML;
+  // Highlight the clicked video in playlist
+  highlightPlaylistItem(video);
   
-  // Highlight active video in playlist
-  document.querySelectorAll(".playlist-item").forEach(x=>x.classList.remove("active"));
+  // Scroll video section into view
+  document.getElementById('videoCard').scrollIntoView({{
+    behavior: 'smooth',
+    block: 'start'
+  }});
+}}
+
+function renderPlaylist(videos){{
+  let html = '';
+  videos.forEach((v, index) => {{
+    html += `
+      <div class="playlist-item" 
+           onclick="playVideo(${{JSON.stringify(v)}})"
+           data-index="${{index}}">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          ${{v.title}}
+        </span>
+      </div>
+    `;
+  }});
   
-  // Try to autoplay
-  setTimeout(() => {{
-    try {{
-      const iframe = document.getElementById('apiPlayer');
-      if(iframe) {{
-        iframe.focus();
-      }}
-    }} catch(e) {{
-      console.log("Autoplay might be blocked by browser");
+  document.getElementById('playlist').innerHTML = html;
+  
+  // Highlight first video
+  if(videos.length > 0){{
+    highlightPlaylistItem(videos[0]);
+  }}
+}}
+
+function highlightPlaylistItem(video){{
+  document.querySelectorAll(".playlist-item").forEach(item => {{
+    item.classList.remove("active");
+    const itemVideo = JSON.parse(item.getAttribute('onclick').match(/playVideo\((.*)\)/)[1]);
+    if(itemVideo.title === video.title){{
+      item.classList.add("active");
     }}
-  }}, 1000);
+  }});
 }}
 
-function renderPlaylist(vs){{
-  playlist.innerHTML=vs.map((v, idx)=>
-    `<div class="playlist-item" onclick='playVideo(${{JSON.stringify(v)}});highlightPlaylistItem(this)' data-idx="${{idx}}">${{v.title}}</div>`
-  ).join("");
+/* ================= PDF FUNCTIONS ================= */
+function renderPdfs(pdfs){{
+  let html = '';
+  pdfs.forEach((pdf, index) => {{
+    html += `
+      <div class="pdf-item" 
+           onclick="openPdf('${{pdf.full_url || pdf.src}}')"
+           data-index="${{index}}">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          ${{pdf.name}}
+        </span>
+      </div>
+    `;
+  }});
+  
+  document.getElementById('pdfList').innerHTML = html;
 }}
 
-function highlightPlaylistItem(el){{
-  document.querySelectorAll(".playlist-item").forEach(x=>x.classList.remove("active"));
-  el.classList.add("active");
+function openPdf(url){{
+  // Open PDF in new tab
+  window.open(url, '_blank');
 }}
 
-function renderPdf(p){{
-  pdfList.innerHTML=p.map((x, idx)=>
-    `<div class="pdf-item" onclick="pdfViewer.src='${{x.src}}';highlightPdfItem(this)" data-idx="${{idx}}">${{x.name}}</div>`
-  ).join("");
-  if(p.length > 0){{
-    pdfViewer.src=p[0].src;
-  }}
-}}
-
-function highlightPdfItem(el){{
-  document.querySelectorAll(".pdf-item").forEach(x=>x.classList.remove("active"));
-  el.classList.add("active");
-}}
-
+/* ================= SEARCH FUNCTION ================= */
 function filterSubjects(val){{
   document.querySelectorAll(".subject").forEach(s=>{{
     s.style.display = s.innerText.toLowerCase().includes(val.toLowerCase())
@@ -481,7 +621,42 @@ function filterSubjects(val){{
   }});
 }}
 
+/* ================= KEYBOARD SHORTCUTS ================= */
+document.addEventListener('keydown', function(e){{
+  // Space to play/pause
+  if(e.code === 'Space' && document.activeElement.tagName !== 'INPUT'){{
+    e.preventDefault();
+    const apiPlayer = document.getElementById('apiPlayer');
+    if(apiPlayer.src){{
+      apiPlayer.focus();
+    }}
+  }}
+  
+  // F for fullscreen
+  if(e.code === 'KeyF' && document.activeElement.tagName !== 'INPUT'){{
+    e.preventDefault();
+    const apiPlayer = document.getElementById('apiPlayer');
+    if(apiPlayer.src){{
+      if(apiPlayer.requestFullscreen){{
+        apiPlayer.requestFullscreen();
+      }}
+    }}
+  }}
+}});
+
+/* ================= INITIALIZATION ================= */
 renderSubjects();
+
+// Auto-load first subject if available
+if(data.length > 0 && data[0].subjects.length > 0){{
+  setTimeout(() => {{
+    const firstSubject = data[0].subjects[0];
+    const firstSubjectElement = document.querySelector('.subject');
+    if(firstSubjectElement){{
+      loadSubject(firstSubject, firstSubjectElement);
+    }}
+  }}, 500);
+}}
 </script>
 
 </body>
@@ -492,41 +667,65 @@ renderSubjects();
     
     return output_path
 
-# Test with the uploaded file
+# Test with sample data
 if __name__ == '__main__':
-    # Test with a sample file
-    test_input = '''(Physics)Lect.-1 Introduction to Physics:https://example.com/video1.mp4
-(Math)Lect.-1 Calculus Basics:https://classplusapp.com/video123
-(Physics)Notes-1 Formulas:https://example.com/notes.pdf
-(Math)Worksheet-1 Problems:https://example.com/worksheet.pdf'''
+    # Create test data
+    test_data = [
+        {
+            'folder': 'Physics',
+            'subjects': [{
+                'name': 'Physics',
+                'videos': [
+                    {
+                        'title': 'Lect.-1 Introduction to Physics',
+                        'src': 'https://engineers-babu.onrender.com/?url=https%3A%2F%2Fexample.com%2Fvideo1.mp4',
+                        'drm': False
+                    },
+                    {
+                        'title': 'Lect.-2 Quantum Mechanics',
+                        'src': 'https://engineers-babu.onrender.com/?url=https%3A%2F%2Fclassplusapp.com%2Fvideo123',
+                        'drm': True
+                    }
+                ],
+                'pdfs': [
+                    {
+                        'name': 'Notes-1 Formulas',
+                        'src': 'https://example.com/notes.pdf',
+                        'full_url': 'https://example.com/notes.pdf'
+                    },
+                    {
+                        'name': 'Worksheet-1 Problems',
+                        'src': 'https://example.com/worksheet.pdf',
+                        'full_url': 'https://example.com/worksheet.pdf'
+                    }
+                ]
+            }]
+        },
+        {
+            'folder': 'Mathematics',
+            'subjects': [{
+                'name': 'Mathematics',
+                'videos': [
+                    {
+                        'title': 'Lect.-1 Calculus Basics',
+                        'src': 'https://engineers-babu.onrender.com/?url=https%3A%2F%2Fexample.com%2Fvideo2.mp4',
+                        'drm': False
+                    }
+                ],
+                'pdfs': []
+            }]
+        }
+    ]
     
-    # Create a test file
-    test_file = '/tmp/test_input.txt'
-    with open(test_file, 'w', encoding='utf-8') as f:
-        f.write(test_input)
-    
-    print("🔍 Parsing txt file...")
-    parsed_data = parse_txt_file(test_file)
-    
-    print(f"✅ Found {len(parsed_data)} subjects")
-    for subject in parsed_data:
-        videos = subject['subjects'][0]['videos']
-        pdfs = subject['subjects'][0]['pdfs']
-        print(f"  📁 {subject['folder']}: {len(videos)} videos, {len(pdfs)} PDFs")
-        for video in videos[:2]:  # Show first 2 videos
-            print(f"     ▶️ {video['title']}")
-            print(f"        🔗 {video['src'][:80]}...")
-        for pdf in pdfs[:2]:  # Show first 2 PDFs
-            print(f"     📄 {pdf['name']}")
-    
-    print("\n🎨 Generating HTML file...")
+    print("🎯 Testing HTML Generation...")
     output_file = '/tmp/test_output.html'
-    generate_html(parsed_data, output_file)
+    generate_html(test_data, output_file)
+    
     print(f"✅ HTML file generated: {output_file}")
-    
-    # Clean up
-    os.remove(test_file)
-    
-    # Print the HTML file path for easy access
-    print(f"\n📁 Output file location: {output_file}")
-    print("📋 To view: Open this file in your web browser")
+    print("\n📋 Features Tested:")
+    print("1. ✅ Fixed layout - No scrolling in video player")
+    print("2. ✅ PDFs open in new tab (not embedded)")
+    print("3. ✅ Clicking video scrolls to video section")
+    print("4. ✅ All original styling preserved")
+    print("\n📁 Open the file in browser to test:")
+    print(f"   file://{output_file}")

@@ -6,7 +6,7 @@ from telegram import Update, Document
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Replace with your bot token
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+BOT_TOKEN = "7601635113:AAHjmE2yjru1sIIbAW6g56-sIc30cv4Tsm8"
 
 def parse_txt_file(file_path):
     """

@@ -100,7 +100,7 @@ def generate_html(data, output_path):
     # Convert data to JSON string for JavaScript
     data_json = json.dumps(data, ensure_ascii=False, indent=2)
     
-    html_template = f'''<!DOCTYPE html>
+    html_template = '''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -109,7 +109,7 @@ def generate_html(data, output_path):
 
 <style>
 /* ================= THEME VARIABLES ================= */
-:root{{
+:root{
   /* 🌙 DARK THEME */
   --page-bg:#0f1117;
   --card-bg:#161b22;
@@ -119,9 +119,9 @@ def generate_html(data, output_path):
   --border:rgba(255,255,255,0.08);
   --shadow:none;
   --primary:#2563eb;
-}}
+}
 
-.light{{
+.light{
   /* ☀️ LIGHT THEME */
   --page-bg:#f4f6fb;
   --card-bg:#ffffff;
@@ -131,24 +131,24 @@ def generate_html(data, output_path):
   --border:rgba(0,0,0,0.06);
   --shadow:0 8px 24px rgba(0,0,0,0.05);
   --primary:#2563eb;
-}}
+}
 
 /* ================= BASE ================= */
-*{{
+*{
   margin:0;
   padding:0;
   box-sizing:border-box;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-}}
+}
 
-body{{
+body{
   background:var(--page-bg);
   color:var(--text);
   transition:background .3s,color .3s;
-}}
+}
 
 /* ================= HEADER ================= */
-.main-header{{
+.main-header{
   position:relative;
   display:flex;
   justify-content:flex-end;
@@ -156,40 +156,40 @@ body{{
   padding:18px 20px;
   background:var(--card-bg);
   border-bottom:1px solid var(--border);
-}}
+}
 
-.title-box{{
+.title-box{
   position:absolute;
   left:50%;
   transform:translateX(-50%);
   text-align:center;
-}}
+}
 
-.title-box h1{{
+.title-box h1{
   font-size:42px;
   font-weight:800;
   background:linear-gradient(90deg,#00f5ff,#E50914,#ffcc00);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
   letter-spacing:2px;
-}}
+}
 
-.title-box span{{
+.title-box span{
   font-size:13px;
   color:var(--muted);
   letter-spacing:3px;
-}}
+}
 
-.toggle{{
+.toggle{
   cursor:pointer;
   padding:8px 14px;
   border-radius:20px;
   background:var(--inner-bg);
   border:1px solid var(--border);
-}}
+}
 
 /* ===== GRADIENT LINE ===== */
-.gradient-bar{{
+.gradient-bar{
   height:6px;
   background:linear-gradient(
     90deg,
@@ -198,14 +198,14 @@ body{{
     #E50914,
     #ffcc00
   );
-}}
+}
 
 /* ================= SEARCH ================= */
-.search{{
+.search{
   padding:14px;
-}}
+}
 
-.search input{{
+.search input{
   width:100%;
   padding:12px;
   border-radius:12px;
@@ -214,18 +214,18 @@ body{{
   background:var(--card-bg);
   color:var(--text);
   box-shadow:var(--shadow);
-}}
+}
 
 /* ================= LAYOUT ================= */
-.container{{
+.container{
   display:grid;
   grid-template-columns:280px 1fr 360px;
   gap:18px;
   padding:18px;
-}}
+}
 
 /* ================= CARD ================= */
-.card{{
+.card{
   background:var(--card-bg);
   border-radius:18px;
   padding:14px;
@@ -233,49 +233,49 @@ body{{
   box-shadow:var(--shadow);
   display:flex;
   flex-direction:column;
-}}
+}
 
-.card h3{{
+.card h3{
   margin-bottom:12px;
   font-size:18px;
   font-weight:600;
-}}
+}
 
 /* ================= SUBJECTS ================= */
-.folder-title{{
+.folder-title{
   padding:12px;
   border-radius:12px;
   background:var(--inner-bg);
   font-weight:600;
   cursor:pointer;
   margin-bottom:8px;
-}}
+}
 
-.subject{{
+.subject{
   margin-top:6px;
   padding:10px;
   border-radius:10px;
   background:var(--inner-bg);
   cursor:pointer;
   transition:all 0.2s;
-}}
+}
 
 .subject:hover,
-.subject.active{{
+.subject.active{
   background:var(--primary);
   color:#fff;
   transform:translateX(4px);
-}}
+}
 
 /* ================= VIDEO PLAYER SECTION ================= */
-#videoPlayer{{
+#videoPlayer{
   flex:1;
   display:flex;
   flex-direction:column;
   min-height:400px;
-}}
+}
 
-#videoPlayerContainer{{
+#videoPlayerContainer{
   flex:1;
   background:var(--inner-bg);
   border-radius:14px;
@@ -285,10 +285,10 @@ body{{
   justify-content:center;
   border:1px solid var(--border);
   margin-bottom:12px;
-}}
+}
 
 /* Fixed API Player Container - NO SCROLLING */
-.api-player-container{{
+.api-player-container{
   width:100%;
   height:100%;
   min-height:360px;
@@ -298,25 +298,25 @@ body{{
   align-items:center;
   justify-content:center;
   overflow:hidden !important;
-}}
+}
 
-.api-player-iframe{{
+.api-player-iframe{
   width:100%;
   height:100%;
   border:none;
   background:#000;
   overflow:hidden !important;
-}}
+}
 
 /* PLAYLIST SECTION */
-#playlistContainer{{
+#playlistContainer{
   flex:1;
   overflow-y:auto;
   max-height:300px;
   padding-right:4px;
-}}
+}
 
-.playlist-item{{
+.playlist-item{
   padding:10px;
   border-radius:10px;
   background:var(--inner-bg);
@@ -326,41 +326,41 @@ body{{
   display:flex;
   align-items:center;
   gap:8px;
-}}
+}
 
-.playlist-item:before{{
+.playlist-item:before{
   content:"▶";
   font-size:12px;
   opacity:0.7;
-}}
+}
 
 .playlist-item:hover,
-.playlist-item.active{{
+.playlist-item.active{
   background:var(--primary);
   color:#fff;
   transform:translateX(4px);
-}}
+}
 
-.playlist-item.active:before{{
+.playlist-item.active:before{
   content:"⏸";
-}}
+}
 
 /* ================= PDF SECTION ================= */
-#pdfContainer{{
+#pdfContainer{
   flex:1;
   display:flex;
   flex-direction:column;
   min-height:400px;
-}}
+}
 
-#pdfList{{
+#pdfList{
   flex:1;
   overflow-y:auto;
   max-height:350px;
   padding-right:4px;
-}}
+}
 
-.pdf-item{{
+.pdf-item{
   padding:10px;
   border-radius:10px;
   background:var(--inner-bg);
@@ -370,63 +370,63 @@ body{{
   display:flex;
   align-items:center;
   gap:8px;
-}}
+}
 
-.pdf-item:before{{
+.pdf-item:before{
   content:"📄";
   font-size:14px;
-}}
+}
 
 .pdf-item:hover,
-.pdf-item.active{{
+.pdf-item.active{
   background:var(--primary);
   color:#fff;
   transform:translateX(4px);
-}}
+}
 
 /* PDF VIEWER REMOVED - Now opens in new tab */
 
 /* ================= RESPONSIVE ================= */
-@media(max-width:900px){{
-  .container{{
+@media(max-width:900px){
+  .container{
     grid-template-columns:1fr;
-  }}
-  #videoPlayerContainer{{
+  }
+  #videoPlayerContainer{
     min-height:300px;
-  }}
-  .api-player-container{{
+  }
+  .api-player-container{
     min-height:300px;
-  }}
-}}
+  }
+}
 
-@media(max-width:600px){{
-  #videoPlayerContainer{{
+@media(max-width:600px){
+  #videoPlayerContainer{
     min-height:250px;
-  }}
-  .api-player-container{{
+  }
+  .api-player-container{
     min-height:250px;
-  }}
-}}
+  }
+}
 
 /* Scrollbar Styling */
-::-webkit-scrollbar{{
+::-webkit-scrollbar{
   width:6px;
-}}
+}
 
-::-webkit-scrollbar-track{{
+::-webkit-scrollbar-track{
   background:transparent;
   border-radius:3px;
-}}
+}
 
-::-webkit-scrollbar-thumb{{
+::-webkit-scrollbar-thumb{
   background:var(--primary);
   border-radius:3px;
-}}
+}
 
-::-webkit-scrollbar-thumb:hover{{
+::-webkit-scrollbar-thumb:hover{
   background:var(--primary);
   opacity:0.8;
-}}
+}
 </style>
 </head>
 
@@ -488,11 +488,11 @@ body{{
 
 <script>
 /* ================= THEME TOGGLE ================= */
-function toggleTheme(){{
+function toggleTheme(){
   document.body.classList.toggle("light");
   const toggleBtn = document.querySelector('.toggle');
   toggleBtn.textContent = document.body.classList.contains('light') ? '🌙' : '☀️';
-}}
+}
 
 /* ================= DATA ================= */
 const data = {data_json};
@@ -501,54 +501,54 @@ const data = {data_json};
 let currentVideo = null;
 
 /* ================= SUBJECTS RENDERING ================= */
-function renderSubjects(){{
+function renderSubjects(){
   let html="";
-  data.forEach(f=>{{
+  data.forEach(f=>{
     html+=`
       <div class="folder-title"
         onclick="toggleFolder(this)">
-        📁 ${{f.folder}}
+        📁 ${f.folder}
       </div>
       <div style="display:none;padding-left:6px;">
     `;
-    f.subjects.forEach(s=>{{
-      html+=`<div class="subject" onclick='loadSubject(${{JSON.stringify(s)}},this)'>${{s.name}}</div>`;
-    }});
+    f.subjects.forEach(s=>{
+      html+=`<div class="subject" onclick='loadSubject(${JSON.stringify(s)},this)'>${s.name}</div>`;
+    });
     html+=`</div>`;
-  }});
+  });
   subjects.innerHTML=html;
-}}
+}
 
-function toggleFolder(element){{
+function toggleFolder(element){
   const content = element.nextElementSibling;
   content.style.display = content.style.display === 'block' ? 'none' : 'block';
-}}
+}
 
 /* ================= LOAD SUBJECT ================= */
-function loadSubject(sub,el){{
+function loadSubject(sub,el){
   // Highlight selected subject
   document.querySelectorAll(".subject").forEach(x=>x.classList.remove("active"));
   el.classList.add("active");
   
   // Load videos if available
-  if(sub.videos && sub.videos.length > 0){{
+  if(sub.videos && sub.videos.length > 0){
     playVideo(sub.videos[0]);
     renderPlaylist(sub.videos);
-  }} else {{
+  } else {
     document.getElementById('apiPlayer').src = '';
     document.getElementById('playlist').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No videos available</div>';
-  }}
+  }
   
   // Load PDFs if available
-  if(sub.pdfs && sub.pdfs.length > 0){{
+  if(sub.pdfs && sub.pdfs.length > 0){
     renderPdfs(sub.pdfs);
-  }} else {{
+  } else {
     document.getElementById('pdfList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No PDFs available</div>';
-  }}
-}}
+  }
+}
 
 /* ================= VIDEO PLAYER FUNCTIONS ================= */
-function playVideo(video){{
+function playVideo(video){
   currentVideo = video;
   
   // Set iframe source
@@ -559,115 +559,115 @@ function playVideo(video){{
   highlightPlaylistItem(video);
   
   // Scroll video section into view
-  document.getElementById('videoCard').scrollIntoView({{
+  document.getElementById('videoCard').scrollIntoView({
     behavior: 'smooth',
     block: 'start'
-  }});
-}}
+  });
+}
 
-function renderPlaylist(videos){{
+function renderPlaylist(videos){
   let html = '';
-  videos.forEach((v, index) => {{
+  videos.forEach((v, index) => {
     html += `
       <div class="playlist-item" 
-           onclick="playVideo(${{JSON.stringify(v)}})"
-           data-index="${{index}}">
+           onclick="playVideo(${JSON.stringify(v)})"
+           data-index="${index}">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          ${{v.title}}
+          ${v.title}
         </span>
       </div>
     `;
-  }});
+  });
   
   document.getElementById('playlist').innerHTML = html;
   
   // Highlight first video
-  if(videos.length > 0){{
+  if(videos.length > 0){
     highlightPlaylistItem(videos[0]);
-  }}
-}}
+  }
+}
 
-function highlightPlaylistItem(video){{
-  document.querySelectorAll(".playlist-item").forEach(item => {{
+function highlightPlaylistItem(video){
+  document.querySelectorAll(".playlist-item").forEach(item => {
     item.classList.remove("active");
     const itemVideo = JSON.parse(item.getAttribute('onclick').match(/playVideo\((.*)\)/)[1]);
-    if(itemVideo.title === video.title){{
+    if(itemVideo.title === video.title){
       item.classList.add("active");
-    }}
-  }});
-}}
+    }
+  });
+}
 
 /* ================= PDF FUNCTIONS ================= */
-function renderPdfs(pdfs){{
+function renderPdfs(pdfs){
   let html = '';
-  pdfs.forEach((pdf, index) => {{
+  pdfs.forEach((pdf, index) => {
     html += `
       <div class="pdf-item" 
-           onclick="openPdf('${{pdf.full_url || pdf.src}}')"
-           data-index="${{index}}">
+           onclick="openPdf('${pdf.full_url || pdf.src}')"
+           data-index="${index}">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          ${{pdf.name}}
+          ${pdf.name}
         </span>
       </div>
     `;
-  }});
+  });
   
   document.getElementById('pdfList').innerHTML = html;
-}}
+}
 
-function openPdf(url){{
+function openPdf(url){
   // Open PDF in new tab
   window.open(url, '_blank');
-}}
+}
 
 /* ================= SEARCH FUNCTION ================= */
-function filterSubjects(val){{
-  document.querySelectorAll(".subject").forEach(s=>{{
+function filterSubjects(val){
+  document.querySelectorAll(".subject").forEach(s=>{
     s.style.display = s.innerText.toLowerCase().includes(val.toLowerCase())
       ? "block" : "none";
-  }});
-}}
+  });
+}
 
 /* ================= KEYBOARD SHORTCUTS ================= */
-document.addEventListener('keydown', function(e){{
+document.addEventListener('keydown', function(e){
   // Space to play/pause
-  if(e.code === 'Space' && document.activeElement.tagName !== 'INPUT'){{
+  if(e.code === 'Space' && document.activeElement.tagName !== 'INPUT'){
     e.preventDefault();
     const apiPlayer = document.getElementById('apiPlayer');
-    if(apiPlayer.src){{
+    if(apiPlayer.src){
       apiPlayer.focus();
-    }}
-  }}
+    }
+  }
   
   // F for fullscreen
-  if(e.code === 'KeyF' && document.activeElement.tagName !== 'INPUT'){{
+  if(e.code === 'KeyF' && document.activeElement.tagName !== 'INPUT'){
     e.preventDefault();
     const apiPlayer = document.getElementById('apiPlayer');
-    if(apiPlayer.src){{
-      if(apiPlayer.requestFullscreen){{
+    if(apiPlayer.src){
+      if(apiPlayer.requestFullscreen){
         apiPlayer.requestFullscreen();
-      }}
-    }}
-  }}
-}});
+      }
+    }
+  }
+});
 
 /* ================= INITIALIZATION ================= */
 renderSubjects();
 
 // Auto-load first subject if available
-if(data.length > 0 && data[0].subjects.length > 0){{
-  setTimeout(() => {{
+if(data.length > 0 && data[0].subjects.length > 0){
+  setTimeout(() => {
     const firstSubject = data[0].subjects[0];
     const firstSubjectElement = document.querySelector('.subject');
-    if(firstSubjectElement){{
+    if(firstSubjectElement){
       loadSubject(firstSubject, firstSubjectElement);
-    }}
-  }}, 500);
-}}
+    }
+  }, 500);
+}
 </script>
 
 </body>
-</html>'''
+</html>'''.format(data_json=json.dumps(data, ensure_ascii=False, indent=2))
     
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html_template)
@@ -745,23 +745,32 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Start the bot"""
-    if BOT_TOKEN == "7601635113:AAHjmE2yjru1sIIbAW6g56-sIc30cv4Tsm8":
-        logger.error("Please set BOT_TOKEN environment variable")
+    # Check if bot token is set
+    if not BOT_TOKEN or BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
+        logger.error("Bot token not set! Please set BOT_TOKEN environment variable.")
         return
     
-    # Create application
-    application = Application.builder().token(BOT_TOKEN).build()
+    # Check if token looks valid
+    if ':' not in BOT_TOKEN or len(BOT_TOKEN) < 30:
+        logger.error(f"Invalid bot token format: {BOT_TOKEN[:20]}...")
+        return
     
-    # Add handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    
-    # Start the bot
-    logger.info("🤖 Bot started! Send /start to begin.")
-    application.run_polling(
-        allowed_updates=Update.ALL_TYPES,
-        drop_pending_updates=True
-    )
+    try:
+        # Create application
+        application = Application.builder().token(BOT_TOKEN).build()
+        
+        # Add handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+        
+        # Start the bot
+        logger.info("🤖 Bot started! Send /start to begin.")
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True
+        )
+    except Exception as e:
+        logger.error(f"Failed to start bot: {e}")
 
 if __name__ == '__main__':
     main()

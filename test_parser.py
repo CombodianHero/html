@@ -47,7 +47,7 @@ def parse_txt_file(file_path):
         is_video = not is_pdf
         
         # Process Classplus URLs through API
-        if 'classplus' in url.lower():
+        if 'classplus' and 'm3u8' in url.lower():
             url = f"https://engineers-babu.onrender.com/?url={urllib.parse.quote(url)}"
         
         # Initialize subject if not exists

@@ -264,10 +264,20 @@ body{{
   border-radius:14px;
 }}
 
-video{{
+.api-player-container {{
   width:100%;
+  height:320px;
   border-radius:12px;
+  overflow:hidden;
   background:black;
+  margin-bottom:10px;
+}}
+
+.api-player-iframe {{
+  width:100%;
+  height:100%;
+  border:none;
+  border-radius:12px;
 }}
 
 .playlist-item{{
@@ -312,8 +322,17 @@ iframe{{
   .container{{
     grid-template-columns:1fr;
   }}
+  .api-player-container {{
+    height:300px;
+  }}
   iframe{{
     height:400px;
+  }}
+}}
+
+@media(max-width:600px){{
+  .api-player-container {{
+    height:250px;
   }}
 }}
 </style>
@@ -408,27 +427,34 @@ function loadSubject(sub,el){{
 function playVideo(v){{
   videoPlayer.innerHTML="";
   
+  // Create API player container
+  const apiPlayerHTML = `
+    <div class="api-player-container">
+      <iframe class="api-player-iframe" 
+              id="apiPlayer" 
+              src="${{v.src}}" 
+              allowfullscreen
+              allow="autoplay; encrypted-media; picture-in-picture">
+      </iframe>
+    </div>
+  `;
+  
+  videoPlayer.innerHTML = apiPlayerHTML;
+  
   // Highlight active video in playlist
   document.querySelectorAll(".playlist-item").forEach(x=>x.classList.remove("active"));
   
-  if(v.drm){{
-    const video=document.createElement("video");
-    video.controls=true;
-    video.autoplay=true;
-    videoPlayer.appendChild(video);
-    
-    if(typeof shaka !== 'undefined'){{
-      const player=new shaka.Player(video);
-      player.load(v.src).catch(err=>{{
-        console.error("Error loading video:", err);
-        videoPlayer.innerHTML=`<p style='padding:20px;text-align:center;color:#ef4444'>Error loading video: ${{err.message}}</p>`;
-      }});
-    }} else {{
-      videoPlayer.innerHTML="<p style='padding:20px;text-align:center;color:#ef4444'>Shaka Player not loaded</p>";
+  // Try to autoplay
+  setTimeout(() => {{
+    try {{
+      const iframe = document.getElementById('apiPlayer');
+      if(iframe) {{
+        iframe.focus();
+      }}
+    }} catch(e) {{
+      console.log("Autoplay might be blocked by browser");
     }}
-  }}else{{
-    videoPlayer.innerHTML=`<video controls autoplay src="${{v.src}}"></video>`;
-  }}
+  }}, 1000);
 }}
 
 function renderPlaylist(vs){{

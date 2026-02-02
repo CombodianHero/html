@@ -2,17 +2,22 @@ import os
 import re
 import json
 import urllib.parse
-from telegram import Update, Document
+import logging
+from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Replace with your bot token
-BOT_TOKEN = "7601635113:AAHjmE2yjru1sIIbAW6g56-sIc30cv4Tsm8"
+# Set up logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Get bot token from environment variable
+BOT_TOKEN = os.environ.get('BOT_TOKEN', '7601635113:AAHjmE2yjru1sIIbAW6g56-sIc30cv4Tsm8')
 
 def parse_txt_file(file_path):
-    """
-    Parse the txt file and classify subjects with videos and PDFs
-    Returns a structured JSON-like dictionary
-    """
+    """Parse the txt file and classify subjects with videos and PDFs"""
     with open(file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
@@ -32,12 +37,11 @@ def parse_txt_file(file_path):
         title = match.group(2).strip()
         url = match.group(3).strip()
         
-        # Extract subject name from title (e.g., "Lect.-1 EVS" -> "EVS")
+        # Extract subject name from title
         subject_match = re.search(r'(?:Lect[.-]?\d+\s+)(.+?)(?:\s*\(|$)', title)
         if subject_match:
             subject_name = subject_match.group(1).strip()
         else:
-            # Fallback: use everything after lecture number
             subject_match = re.search(r'Lect[.-]?\d+\s+(.+)', title)
             if subject_match:
                 subject_name = subject_match.group(1).strip()
@@ -51,8 +55,8 @@ def parse_txt_file(file_path):
         is_pdf = url.endswith('.pdf')
         is_video = not is_pdf
         
-        # Process Classplus URLs
-        if 'classplus' in url.lower():
+        # Process Classplus URLs through API
+        if is_video and 'classplus' in url.lower():
             url = f"https://engineers-babu.onrender.com/?url={urllib.parse.quote(url)}"
         
         # Initialize subject if not exists
@@ -67,7 +71,7 @@ def parse_txt_file(file_path):
             subjects_dict[subject_name]['videos'].append({
                 'title': title,
                 'src': url,
-                'drm': 'classplus' in match.group(3).lower()  # Original URL check
+                'drm': 'classplus' in match.group(3).lower()
             })
         else:
             subjects_dict[subject_name]['pdfs'].append({
@@ -91,9 +95,7 @@ def parse_txt_file(file_path):
     return result
 
 def generate_html(data, output_path):
-    """
-    Generate HTML file from parsed data using the provided template
-    """
+    """Generate HTML file from parsed data"""
     # Convert data to JSON string for JavaScript
     data_json = json.dumps(data, ensure_ascii=False, indent=2)
     
@@ -103,9 +105,6 @@ def generate_html(data, output_path):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Engineers Babu | HTML Viewer</title>
-
-<!-- Shaka Player (DRM / DASH) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js"></script>
 
 <style>
 /* ================= THEME VARIABLES ================= */
@@ -549,10 +548,19 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove(output_path)
         
     except Exception as e:
+        logger.error(f"Error processing file: {e}")
         await update.message.reply_text(f"❌ Error processing file: {str(e)}")
+
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Log errors"""
+    logger.error(f"Update {update} caused error {context.error}")
 
 def main():
     """Start the bot"""
+    if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
+        logger.error("Please set BOT_TOKEN environment variable")
+        return
+    
     # Create application
     application = Application.builder().token(BOT_TOKEN).build()
     
@@ -560,9 +568,15 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     
+    # Add error handler
+    application.add_error_handler(error_handler)
+    
     # Start the bot
-    print("🤖 Bot started! Send /start to begin.")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    logger.info("🤖 Bot started! Send /start to begin.")
+    application.run_polling(
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=True
+    )
 
 if __name__ == '__main__':
     main()
